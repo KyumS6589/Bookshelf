@@ -1,0 +1,399 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Bookshelf — Single File App</title>
+  <style>
+    :root{--bg:#0f1724;--card:#0b1220;--muted:#9aa4b2;--accent:#7dd3fc;--accent-2:#60a5fa;--danger:#fb7185;--glass:rgba(255,255,255,0.03);--radius:14px}
+    html,body{height:100%;}
+    body{font-family:Inter,ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial; margin:0; background:linear-gradient(180deg,#07101a 0%, #0f1724 100%); color:#e6eef6; -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale}
+    .app{max-width:1100px;margin:28px auto;padding:20px}
+    header{display:flex;align-items:center;justify-content:space-between;gap:20px}
+    .brand{display:flex;gap:14px;align-items:center}
+    .logo{width:56px;height:56px;border-radius:12px;background:linear-gradient(135deg,var(--accent),var(--accent-2));display:flex;align-items:center;justify-content:center;box-shadow:0 6px 20px rgba(3,7,18,0.6)}
+    .logo svg{width:28px;height:28px}
+    h1{margin:0;font-size:22px}
+    p.lead{margin:0;color:var(--muted);font-size:13px}.controls{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+.btn{background:var(--glass);border:1px solid rgba(255,255,255,0.04);color:inherit;padding:8px 12px;border-radius:12px;cursor:pointer;display:inline-flex;gap:8px;align-items:center}
+.btn.accent{background:linear-gradient(90deg,var(--accent),var(--accent-2));color:#07203a;border:none}
+.btn.ghost{background:transparent;border:1px dashed rgba(255,255,255,0.03)}
+
+.toolbar{margin-top:18px;background:rgba(255,255,255,0.02);padding:12px;border-radius:12px;display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+.search{flex:1;min-width:170px}
+.search input{width:100%;padding:10px 12px;border-radius:10px;border:1px solid rgba(255,255,255,0.03);background:transparent;color:inherit}
+.select, .small-input{padding:8px;border-radius:10px;border:1px solid rgba(255,255,255,0.03);background:transparent;color:inherit}
+.small-input{min-width:120px}
+
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:18px}
+@media (max-width:1000px){.grid{grid-template-columns:repeat(2,1fr)}}
+@media (max-width:640px){.grid{grid-template-columns:1fr}}
+
+.card{background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));border-radius:var(--radius);padding:12px;display:flex;gap:12px;align-items:flex-start;border:1px solid rgba(255,255,255,0.03)}
+.cover{width:84px;height:120px;border-radius:8px;object-fit:cover;background:#071427}
+.meta{flex:1}
+.title{font-weight:600}
+.muted{color:var(--muted);font-size:13px}
+.tags{margin-top:8px;display:flex;gap:6px;flex-wrap:wrap}
+.tag{background:rgba(255,255,255,0.03);padding:6px 8px;border-radius:999px;font-size:12px}
+.notes{margin-top:8px;color:var(--muted);font-size:13px;line-height:1.3}
+.card-actions{display:flex;gap:8px;margin-top:10px}
+.pill{padding:6px 8px;border-radius:999px;background:rgba(255,255,255,0.02);font-size:12px}
+
+footer{margin-top:24px;color:var(--muted);font-size:13px;text-align:center}
+
+/* modal */
+.modal-backdrop{position:fixed;inset:0;background:linear-gradient(180deg,rgba(2,6,23,0.6),rgba(2,6,23,0.8));display:none;align-items:center;justify-content:center;padding:20px}
+.modal{background:#041023;padding:18px;border-radius:12px;min-width:320px;max-width:820px;width:100%;box-shadow:0 10px 40px rgba(0,0,0,0.6);border:1px solid rgba(255,255,255,0.03)}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.form-row{display:flex;flex-direction:column;gap:6px}
+input,textarea,select{padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,0.03);background:transparent;color:inherit}
+textarea{min-height:90px}
+.modal-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:12px}
+
+.hidden{display:none}
+.kbd{background:rgba(255,255,255,0.02);padding:4px 8px;border-radius:6px;font-size:12px}
+
+/* small helpers */
+.flex{display:flex}
+.center{align-items:center}
+.gap-8{gap:8px}
+.muted-2{color:#7f8a96}
+
+/* rating */
+.stars{display:inline-flex;gap:4px}
+.star{width:18px;height:18px;opacity:0.6;cursor:pointer}
+.star.active{opacity:1}
+
+/* empty state */
+.empty{padding:40px;border-radius:12px;background:linear-gradient(180deg,rgba(255,255,255,0.01),transparent);text-align:center;color:var(--muted)}
+
+/* file input styling */
+input[type=file]{display:none}
+
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header>
+      <div class="brand">
+        <div class="logo" aria-hidden>
+          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 6a1 1 0 011-1h12a1 1 0 011 1v12a1 1 0 01-1 1H4a1 1 0 01-1-1V6z" fill="rgba(255,255,255,0.12)"/><path d="M8 8h8M8 11h8M8 14h5" stroke="#fff" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" opacity="0.9"/></svg>
+        </div>
+        <div>
+          <h1>Bookshelf</h1>
+          <p class="lead">Keep track of books to read, reading now, and finished ones — single-file HTML app.</p>
+        </div>
+      </div><div class="controls">
+    <div class="flex center gap-8">
+      <button class="btn" id="importBtn">Import</button>
+      <button class="btn" id="exportBtn">Export</button>
+    </div>
+    <button class="btn accent" id="addBtn">+ Add Book</button>
+  </div>
+</header>
+
+<div class="toolbar">
+  <div class="search"><input id="search" placeholder="Search title, author, or notes" /></div>
+  <select id="statusFilter" class="select">
+    <option value="">All statuses</option>
+    <option value="To Read">To Read</option>
+    <option value="Reading">Reading</option>
+    <option value="Finished">Finished</option>
+  </select>
+  <input id="tagFilter" class="small-input" placeholder="Tag filter" />
+  <select id="sort" class="select">
+    <option value="title|asc">Title ↑</option>
+    <option value="title|desc">Title ↓</option>
+    <option value="author|asc">Author ↑</option>
+    <option value="author|desc">Author ↓</option>
+    <option value="year|desc">Year ↓</option>
+    <option value="year|asc">Year ↑</option>
+    <option value="rating|desc">Rating ↓</option>
+    <option value="rating|asc">Rating ↑</option>
+  </select>
+  <label class="kbd" title="Dense layout"><input id="dense" type="checkbox" style="margin-right:8px"/>Dense</label>
+</div>
+
+<main id="mainArea">
+  <div id="grid" class="grid"></div>
+  <div id="empty" class="empty hidden">
+    <h3>No books found</h3>
+    <p class="muted">Add a book or broaden your search / filters.</p>
+  </div>
+</main>
+
+<footer>
+  <small class="muted">Local only — data is stored in your browser's localStorage. Export to back it up.</small>
+</footer>
+
+  </div>  <!-- Hidden file input for import -->  <input type="file" id="fileInput" accept="application/json" />  <!-- Modal -->  <div class="modal-backdrop" id="modalBackdrop">
+    <div class="modal" role="dialog" aria-modal="true">
+      <h3 id="modalTitle">Add book</h3>
+      <div style="height:12px"></div>
+      <div class="form-grid">
+        <div class="form-row">
+          <label>Title</label>
+          <input id="f_title" />
+        </div>
+        <div class="form-row">
+          <label>Author</label>
+          <input id="f_author" />
+        </div>
+        <div class="form-row">
+          <label>Year</label>
+          <input id="f_year" type="number" />
+        </div>
+        <div class="form-row">
+          <label>Status</label>
+          <select id="f_status">
+            <option>To Read</option>
+            <option>Reading</option>
+            <option>Finished</option>
+          </select>
+        </div>
+        <div class="form-row" style="grid-column:1/3">
+          <label>Cover URL</label>
+          <input id="f_cover" placeholder="https://... (optional)" />
+        </div>
+        <div class="form-row" style="grid-column:1/3">
+          <label>Tags (comma separated)</label>
+          <input id="f_tags" placeholder="sci-fi, productivity" />
+        </div>
+        <div class="form-row" style="grid-column:1/3">
+          <label>Notes</label>
+          <textarea id="f_notes" /></textarea>
+        </div>
+        <div class="form-row">
+          <label>Rating</label>
+          <div id="f_rating" class="stars"></div>
+        </div>
+        <div class="form-row">
+          <label>&nbsp;</label>
+          <div class="muted-2">Click a star to set rating (0-5)</div>
+        </div>
+      </div><div class="modal-actions">
+    <button class="btn" id="cancelBtn">Cancel</button>
+    <button class="btn accent" id="saveBtn">Save</button>
+  </div>
+</div>
+
+  </div>  <script>
+    // Single-file Bookshelf app
+    (function(){
+      const STORAGE_KEY = 'bookshelf.v1.html';
+      const DEFAULT_COVER = 'data:image/svg+xml;utf8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="200" height="300" viewBox="0 0 200 300"><rect width="100%" height="100%" fill="#0b1220"/><g fill="#9aa4b2" font-family="sans-serif" font-size="18" text-anchor="middle"><text x="50%" y="50%">No Cover</text></g></svg>');
+
+      // Elements
+      const grid = document.getElementById('grid');
+      const empty = document.getElementById('empty');
+      const addBtn = document.getElementById('addBtn');
+      const modalBackdrop = document.getElementById('modalBackdrop');
+      const modalTitle = document.getElementById('modalTitle');
+      const cancelBtn = document.getElementById('cancelBtn');
+      const saveBtn = document.getElementById('saveBtn');
+      const fileInput = document.getElementById('fileInput');
+      const importBtn = document.getElementById('importBtn');
+      const exportBtn = document.getElementById('exportBtn');
+
+      const searchInput = document.getElementById('search');
+      const statusFilter = document.getElementById('statusFilter');
+      const tagFilter = document.getElementById('tagFilter');
+      const sortSelect = document.getElementById('sort');
+      const denseCheck = document.getElementById('dense');
+
+      // form
+      const f_title = document.getElementById('f_title');
+      const f_author = document.getElementById('f_author');
+      const f_year = document.getElementById('f_year');
+      const f_status = document.getElementById('f_status');
+      const f_cover = document.getElementById('f_cover');
+      const f_tags = document.getElementById('f_tags');
+      const f_notes = document.getElementById('f_notes');
+      const f_rating = document.getElementById('f_rating');
+
+      let books = [];
+      let editingId = null;
+      let ratingValue = 0;
+
+      // sample
+      const sample = [
+        { id: id(), title: 'The Pragmatic Programmer', author: 'Andrew Hunt, David Thomas', year: 1999, status: 'Finished', rating:5, tags:['software','craft'], notes:'Classic on software craftsmanship.', cover:''},
+        { id: id(), title: 'Atomic Habits', author: 'James Clear', year: 2018, status: 'Reading', rating:4, tags:['self-help','productivity'], notes:'Tiny changes, remarkable results.', cover:'' },
+        { id: id(), title: 'Dune', author: 'Frank Herbert', year: 1965, status: 'To Read', rating:0, tags:['sci-fi'], notes:'Start before the movie night!', cover:'' }
+      ];
+
+      // init
+      load();
+      bind();
+      render();
+
+      function id(){ return Math.random().toString(36).slice(2,9); }
+
+      function load(){
+        try{
+          const raw = localStorage.getItem(STORAGE_KEY);
+          if(raw){ books = JSON.parse(raw); }
+          else { books = sample.slice(); save(); }
+        }catch(e){ books = sample.slice(); }
+      }
+      function save(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(books)); }
+
+      function bind(){
+        addBtn.addEventListener('click', ()=>openModal());
+        cancelBtn.addEventListener('click', closeModal);
+        saveBtn.addEventListener('click', onSave);
+        importBtn.addEventListener('click', ()=>fileInput.click());
+        fileInput.addEventListener('change', onFile);
+        exportBtn.addEventListener('click', onExport);
+        searchInput.addEventListener('input', render);
+        statusFilter.addEventListener('change', render);
+        tagFilter.addEventListener('input', render);
+        sortSelect.addEventListener('change', render);
+        denseCheck.addEventListener('change', ()=>{
+          grid.style.gridTemplateColumns = denseCheck.checked ? '1fr' : window.innerWidth < 640 ? '1fr' : window.innerWidth < 1000 ? 'repeat(2,1fr)' : 'repeat(3,1fr)';
+        });
+
+        // stars in modal
+        renderStars();
+      }
+
+      function onFile(e){
+        const f = e.target.files && e.target.files[0];
+        if(!f) return;
+        const reader = new FileReader();
+        reader.onload = ()=>{
+          try{
+            const parsed = JSON.parse(reader.result);
+            if(Array.isArray(parsed)){
+              books = parsed.map(normalizeBook);
+              save(); render();
+              alert('Imported ' + books.length + ' books');
+            } else alert('JSON must be an array of book objects');
+          }catch(err){ alert('Invalid JSON file'); }
+        };
+        reader.readAsText(f);
+        fileInput.value = '';
+      }
+
+      function onExport(){
+        const blob = new Blob([JSON.stringify(books, null, 2)], {type:'application/json'});
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a'); a.href=url; a.download='bookshelf.json'; a.click(); URL.revokeObjectURL(url);
+      }
+
+      function normalizeBook(x){
+        return {
+          id: x.id || id(),
+          title: String(x.title || '').trim(),
+          author: String(x.author || '').trim(),
+          year: x.year ? Number(x.year) : undefined,
+          status: ['To Read','Reading','Finished'].includes(x.status) ? x.status : 'To Read',
+          rating: x.rating ? Number(x.rating) : 0,
+          tags: Array.isArray(x.tags) ? x.tags.map(String) : (x.tags ? String(x.tags).split(',').map(s=>s.trim()).filter(Boolean) : []),
+          notes: x.notes ? String(x.notes) : '',
+          cover: x.cover ? String(x.cover) : ''
+        };
+      }
+
+      function render(){
+        const q = (searchInput.value||'').trim().toLowerCase();
+        const status = statusFilter.value;
+        const tag = (tagFilter.value||'').trim().toLowerCase();
+        const [key,dir] = (sortSelect.value||'title|asc').split('|');
+
+        let list = books.filter(b=>{
+          const matchesQ = !q || b.title.toLowerCase().includes(q) || (b.author||'').toLowerCase().includes(q) || (b.notes||'').toLowerCase().includes(q);
+          const matchesStatus = !status || b.status===status;
+          const matchesTag = !tag || (b.tags||[]).some(t=>t.toLowerCase().includes(tag));
+          return matchesQ && matchesStatus && matchesTag;
+        });
+
+        list.sort((a,b)=>{
+          const av = (a[key]===undefined||a[key]===null)?'':a[key];
+          const bv = (b[key]===undefined||b[key]===null)?'':b[key];
+          if(typeof av === 'number' && typeof bv === 'number') return dir==='asc'? av-bv : bv-av;
+          const aa = String(av).toLowerCase(); const bb = String(bv).toLowerCase();
+          if(aa<bb) return dir==='asc'?-1:1; if(aa>bb) return dir==='asc'?1:-1; return 0;
+        });
+
+        grid.innerHTML = '';
+        if(list.length===0){ empty.classList.remove('hidden'); } else { empty.classList.add('hidden'); }
+
+        list.forEach(b=>{
+          const el = document.createElement('div'); el.className='card';
+
+          const img = document.createElement('img'); img.className='cover'; img.src = b.cover || DEFAULT_COVER; img.alt = b.title + ' cover';
+
+          const meta = document.createElement('div'); meta.className='meta';
+          const t = document.createElement('div'); t.className='title'; t.textContent = b.title;
+          const a = document.createElement('div'); a.className='muted'; a.textContent = b.author + (b.year? ' • '+b.year:'');
+          const info = document.createElement('div'); info.style.marginTop='6px';
+          const pill = document.createElement('span'); pill.className='pill'; pill.textContent = b.status + (b.rating? ' • ★'+b.rating:'');
+          info.appendChild(pill);
+
+          const tags = document.createElement('div'); tags.className='tags'; (b.tags||[]).forEach(tg=>{ const s=document.createElement('span'); s.className='tag'; s.textContent=tg; tags.appendChild(s);});
+
+          const notes = document.createElement('div'); notes.className='notes'; notes.textContent = b.notes || '';
+
+          const actions = document.createElement('div'); actions.className='card-actions';
+          const edit = document.createElement('button'); edit.className='btn'; edit.textContent='Edit'; edit.addEventListener('click', ()=>openModal(b.id));
+          const del = document.createElement('button'); del.className='btn ghost'; del.textContent='Delete'; del.addEventListener('click', ()=>{ if(confirm('Delete "'+b.title+'"?')){ books=books.filter(x=>x.id!==b.id); save(); render(); }});
+          actions.appendChild(edit); actions.appendChild(del);
+
+          meta.appendChild(t); meta.appendChild(a); meta.appendChild(info); meta.appendChild(tags); if(b.notes) meta.appendChild(notes); meta.appendChild(actions);
+
+          el.appendChild(img); el.appendChild(meta);
+          grid.appendChild(el);
+        });
+      }
+
+      function openModal(bookId){
+        editingId = bookId || null;
+        modalBackdrop.style.display = 'flex';
+        if(editingId){
+          modalTitle.textContent = 'Edit book';
+          const b = books.find(x=>x.id===editingId);
+          if(b){
+            f_title.value = b.title; f_author.value = b.author; f_year.value = b.year||''; f_status.value = b.status||'To Read'; f_cover.value = b.cover||''; f_tags.value = (b.tags||[]).join(', '); f_notes.value = b.notes||''; ratingValue = b.rating||0; updateStarUI(); }
+        } else {
+          modalTitle.textContent = 'Add book';
+          f_title.value=''; f_author.value=''; f_year.value=''; f_status.value='To Read'; f_cover.value=''; f_tags.value=''; f_notes.value=''; ratingValue=0; updateStarUI();
+        }
+      }
+      function closeModal(){ modalBackdrop.style.display='none'; editingId=null; }
+
+      function onSave(){
+        const payload = {
+          title: (f_title.value||'').trim(),
+          author: (f_author.value||'').trim(),
+          year: f_year.value ? Number(f_year.value) : undefined,
+          status: f_status.value,
+          cover: f_cover.value.trim() || '',
+          tags: (f_tags.value||'').split(',').map(s=>s.trim()).filter(Boolean),
+          notes: f_notes.value || '',
+          rating: ratingValue || 0
+        };
+        if(!payload.title || !payload.author){ alert('Please provide title and author'); return; }
+        if(editingId){
+          books = books.map(b=> b.id===editingId ? Object.assign({},b,payload) : b);
+        } else {
+          books.unshift(Object.assign({id:id()}, payload));
+        }
+        save(); render(); closeModal();
+      }
+
+      function renderStars(){
+        f_rating.innerHTML = '';
+        for(let i=1;i<=5;i++){
+          const s = document.createElement('svg'); s.setAttribute('viewBox','0 0 24 24'); s.className='star'; s.innerHTML = '<path d="M12 .587l3.668 7.431L23.4 9.75l-5.668 5.526L18.335 24 12 19.771 5.665 24l.603-8.724L.6 9.75l7.732-1.732L12 .587z"/>'; s.dataset.value = i; s.addEventListener('click', ()=>{ ratingValue = i; updateStarUI(); }); f_rating.appendChild(s);
+        }
+        updateStarUI();
+      }
+      function updateStarUI(){
+        Array.from(f_rating.children).forEach((el,idx)=>{ el.classList.toggle('active', idx < ratingValue); });
+      }
+
+    })();
+  </script></body>
+</html>
